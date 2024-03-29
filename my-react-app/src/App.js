@@ -7,6 +7,8 @@ const App = () => {
   const [fileUploadMessage, setFileUploadMessage] = useState('');
   const [complianceResult, setComplianceResult] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const [summaryText, setSummaryText] = useState('');
+  const [topFeatures, setTopFeatures] = useState([]);
 
   const handleFileChange = (event) => {
     const file = event.target.files[0];
@@ -20,34 +22,46 @@ const App = () => {
       setFileUploadMessage("⚠️ Please upload a file before checking compliance.");
       return;
     }
-
+  
     const formData = new FormData();
     formData.append('file', selectedFile);
-
+  
     try {
       setIsLoading(true);
-
-      const response = await fetch(process.env.REACT_APP_BACKEND_URL || 'http://localhost:7000/upload', {
+  
+      const response = await fetch('http://localhost:5000/', {
         method: 'POST',
         body: formData,
       });
-
+  
       if (!response.ok) {
         const errorData = await response.json();
         console.error('Error:', errorData.error);
         setFileUploadMessage(`Error: ${errorData.error}`);
         return;
       }
-
+  
       const jsonData = await response.json();
       console.log('JSON Data:', jsonData);
-
+  
       if (jsonData.complianceStatus) {
         setComplianceResult(`Compliance Status: ${jsonData.complianceStatus}`);
       }
-
+      if (jsonData.topFeatures && jsonData.summaryText) {
+        setTopFeatures(jsonData.topFeatures);
+  
+        // Process the summary text directly in the return statement
+        const lines = jsonData.summaryText.split('\n').filter(line => line.trim() !== '');
+        setSummaryText(
+          <div style={{ textAlign: 'left' }}>
+            {lines.map((line, index) => (
+              <p key={index}>{line.includes(':') ? <span><strong>{line.split(':')[0]}</strong>: {line.split(':')[1]}</span> : line}</p>
+            ))}
+          </div>
+        );
+      }
+  
       setFileUploadMessage('File uploaded successfully!');
-
     } catch (error) {
       console.error('Error:', error);
       setFileUploadMessage('An error occurred while checking compliance.');
@@ -152,34 +166,49 @@ const App = () => {
           </button>
         </div>
         {complianceResult && (
-  <div style={{
-    marginTop: '30px',
-    padding: '16px',
-    borderRadius: '10px',
-    backgroundColor: complianceResult.includes('Not Compliant') ? '#d11b2c' : '#cff7cd',
-    border: '1px solid #f5c6cb',
-    transition: 'background-color 0.3s, border-color 0.3s'
-  }}>
-    <p style={{
-      color: complianceResult.includes('Not Compliant') ? '#eef2ed' : '#155724',
-      fontWeight: 'bold',
-      fontSize: complianceResult.includes('Not Compliant') ? '24px' : '20px',
-      marginBottom: '8px',
-      textAlign: 'center',
-      lineHeight: '1.4'
-    }}>{complianceResult}</p>
-  </div>
-)}
-
-{fileUploadMessage && (
-  <p style={{
-    // color: fileUploadMessage.includes('successfully') ? '#008000' : '#ff0000',
-    marginTop: '20px',
-    textAlign: 'center',
-    fontSize: fileUploadMessage.includes('successfully') ? '20px' : '18px',
-    fontWeight: fileUploadMessage.includes('successfully') ? 'normal' : 'bold'
-  }}>{fileUploadMessage}</p>
-)}
+          <div style={{
+            marginTop: '30px',
+            padding: '16px',
+            borderRadius: '10px',
+            backgroundColor: complianceResult.includes('Not Compliant') ? '#d11b2c' : '#cff7cd',
+            border: '1px solid #f5c6cb',
+            transition: 'background-color 0.3s, border-color 0.3s'
+          }}>
+            <p style={{
+              color: complianceResult.includes('Not Compliant') ? '#eef2ed' : '#155724',
+              fontWeight: 'bold',
+              fontSize: complianceResult.includes('Not Compliant') ? '24px' : '20px',
+              marginBottom: '8px',
+              textAlign: 'center',
+              lineHeight: '1.4'
+            }}>{complianceResult}</p>
+          </div>
+        )}
+        {summaryText && (
+          <div style={{ marginTop: '30px'}}>
+            <h3>Summary Text:</h3>
+            {summaryText}
+          </div>
+        )}
+        {topFeatures.length > 0 && (
+          <div style={{ marginTop: '30px', textAlign: 'left' }}>
+            <h3 style={{ color: '#000', marginBottom: '10px' }}>Top Features:</h3>
+            <ul style={{ listStyleType: 'disc', paddingLeft: '20px', fontSize: '16px' }}>
+              {topFeatures.map((feature, index) => (
+                <li key={index}>{feature}</li>
+              ))}
+            </ul>
+          </div>
+        )}
+        {fileUploadMessage && (
+          <p style={{
+            color: fileUploadMessage.includes('successfully') ? '#008000' : '#ff0000',
+            marginTop: '20px',
+            textAlign: 'center',
+            fontSize: fileUploadMessage.includes('successfully') ? '20px' : '18px',
+            fontWeight: fileUploadMessage.includes('successfully') ? 'normal' : 'bold'
+          }}>{fileUploadMessage}</p>
+        )}
       </div>
     </div>
   );
